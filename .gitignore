@@ -1,0 +1,18 @@
+# build output
+.venv/
+build/
+dist/
+*.spec
+*.dmg
+rw.dmg
+icon.icns
+icon.iconset/
+
+# signing secrets - never commit
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+
+# macOS
+.DS_Store

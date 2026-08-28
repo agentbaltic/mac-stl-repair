@@ -1,0 +1,72 @@
+MAC STL REPAIR
+==============
+By Dave Tries This  -  youtube.com/@davetriesthis
+Latest version:     https://rebrand.ly/stlrepair
+
+Fixes 3D-print files that a slicer rejects - holes, non-manifold edges,
+flipped normals, stray fragments. No file size limit. Everything runs on
+your own Mac; nothing is uploaded to the internet.
+
+
+INSTALL
+-------
+Drag STL Repair onto the Applications folder shown next to it.
+Then open it from Applications or Launchpad.
+
+
+HOW TO USE IT
+-------------
+The app opens a page in your web browser. That page is the app.
+
+  - Drag STL files onto the box, or click it to choose files.
+  - Several at once is fine; they queue up.
+  - Repaired files are saved to:  Downloads / STL Repaired
+    with "_repaired" added to the name.
+  - Your original file is never changed.
+  - "Open results folder" jumps straight there in Finder.
+
+A 90 MB file takes about 10 seconds. Bigger files may sit on "repairing"
+for a while - that is normal, let it finish.
+
+When you are done, QUIT the app (Command-Q, or right-click its Dock icon
+and choose Quit). Closing the browser tab alone leaves it running.
+
+
+READING THE RESULTS
+-------------------
+Each file gets a card showing before and after:
+
+  Watertight      No holes. Must say "yes" for a reliable print.
+  Manifold        No impossible edges. Must say "yes".
+  Open edges      Holes found. Should be 0 afterwards.
+  Shells          Separate pieces in the file.
+  Triangles       Detail level. A small change is expected.
+
+A green "repaired" or "already fine" tag means it is good to slice.
+An orange "partly fixed" tag means something survived the repair - the
+file is still usable, but look it over before printing.
+
+
+THE ORANGE NOTE
+---------------
+If you see a note about triangles being added, read it.
+
+Closing a hole means inventing new surface. The app closes holes
+plausibly, but it cannot know how the original surface actually ran. If a
+large chunk was missing, check that area looks right before committing to
+a long print.
+
+A note about VOLUME CHANGE on an already-closed model is a stronger
+warning: the repair altered the actual shape. Inspect before printing.
+
+
+FILE TYPES
+----------
+Reads STL (both kinds), OBJ, PLY, OFF, 3MF, GLB.
+Always writes standard binary STL.
+
+
+IF IT WILL NOT OPEN
+-------------------
+This app is built for Apple Silicon Macs (M1 and later). On an older
+Intel Mac it will not launch. Ask David for a rebuild.
