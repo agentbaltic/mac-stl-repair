@@ -23,7 +23,29 @@ import webbrowser
 from pathlib import Path
 
 APP_NAME = "STL Repair"
-OUT_DIR = Path.home() / "Downloads" / "STL Repaired"
+DEFAULT_OUT_DIR = Path.home() / "Downloads" / "STL Repaired"
+PREFS_FILE = Path.home() / "Library" / "Application Support" / "STL Repair" / "prefs.json"
+
+
+def _load_out_dir() -> Path:
+    try:
+        saved = json.loads(PREFS_FILE.read_text()).get("out_dir")
+        if saved:
+            return Path(saved)
+    except Exception:
+        pass
+    return DEFAULT_OUT_DIR
+
+
+def _save_out_dir(path: Path) -> None:
+    try:
+        PREFS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PREFS_FILE.write_text(json.dumps({"out_dir": str(path)}))
+    except Exception:
+        pass
+
+
+OUT_DIR = None  # set in main(), after imports are settled
 
 # ---------------------------------------------------------------- page
 
@@ -32,136 +54,185 @@ PAGE = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STL Repair</title>
+<title>Mac STL Repair</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f6f7f9; --panel:#fff; --ink:#14181f; --muted:#5d6675;
-    --line:#e2e6ec; --accent:#2f6df6; --accent-soft:#eaf1ff;
-    --ok:#0f8a4f; --warn:#b06a00; --bad:#c8362c; --shadow:0 1px 3px rgba(16,24,40,.07);
-  }
-  @media (prefers-color-scheme:dark){
-    :root:not([data-theme="light"]){
-      --bg:#0f1115; --panel:#171a21; --ink:#e8ecf2; --muted:#98a2b3;
-      --line:#262b35; --accent:#5b8dff; --accent-soft:#1b2740;
-      --ok:#3ecf8e; --warn:#e0a44a; --bad:#f2695c; --shadow:none;
-    }
+    --ink:#1a1a1a; --cream:#f7f5f0; --amber:#e3a945; --teal:#2a9e76; --teal-dark:#1f7a5a;
+    --slate:#4a5568; --ochre:#96742a; --rust:#b85c1a; --violet:#7a2eac;
+    --hairline:#e5e5e5; --drop-border:#d8d2c4;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
-    padding:32px 20px 60px}
-  .wrap{max-width:780px;margin:0 auto}
-  header{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:16px}
-  h1{font-size:26px;margin:0 0 5px;letter-spacing:-.02em;font-weight:680}
-  .by{font-size:13.5px;color:var(--muted)}
-  .by a{color:var(--accent);text-decoration:none;font-weight:600}
-  .by a.mute{color:var(--muted);font-weight:400}
-  .by a:hover{text-decoration:underline}
-  .by .dot{margin:0 7px;opacity:.5}
-  .sub{color:var(--muted);font-size:13.5px;margin-bottom:22px}
-  .about{margin-top:38px;padding-top:26px;border-top:1px solid var(--line)}
-  .about h2{font-size:14px;margin:0 0 7px;letter-spacing:.02em;
-    text-transform:uppercase;color:var(--muted);font-weight:650}
-  .about p{margin:0 0 22px;font-size:14px;line-height:1.62;color:var(--ink);
-    max-width:66ch}
-  .about b{font-weight:620}
-  .share{background:var(--accent-soft);border-radius:10px;padding:12px 16px;
-    font-size:13.5px;color:var(--muted)}
-  .share a{display:block;color:var(--accent);font-weight:640;text-decoration:none;
-    padding:3px 0}
-  .share a:hover{text-decoration:underline}
-  #drop{background:var(--panel);border:2px dashed var(--line);border-radius:14px;
-    padding:44px 24px;text-align:center;transition:.15s;cursor:pointer;box-shadow:var(--shadow)}
-  #drop:hover{border-color:var(--accent)}
-  #drop.over{border-color:var(--accent);background:var(--accent-soft)}
-  #drop .big{font-size:17px;font-weight:600;margin-bottom:6px}
-  #drop .small{color:var(--muted);font-size:13px}
-  .btn{display:inline-block;margin-top:14px;background:var(--accent);color:#fff;
-    border:0;border-radius:8px;padding:9px 18px;font-size:14px;font-weight:550;cursor:pointer}
-  .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+  body{margin:0;background:var(--cream);color:var(--ink);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  section.pad{padding:clamp(40px,6vw,80px) 0}
+  a{color:var(--teal);text-decoration:none}
+  a:hover{color:var(--teal-dark);text-decoration:underline}
+  .eyebrow{font-weight:800;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ochre);margin-bottom:12px}
+  h1{font-weight:900;font-size:clamp(34px,4.6vw,58px);letter-spacing:-.04em;line-height:1;margin:0 0 16px}
+  .by{font-size:14px;color:var(--slate);font-weight:500}
+  .by b{font-weight:700;color:var(--ink)}
+  h2{font-weight:800;font-size:clamp(24px,2.6vw,32px);letter-spacing:-.02em;margin:0 0 10px}
+  .lede{font-size:17px;color:var(--slate);margin:18px 0 34px;max-width:56ch}
+
+  .card{background:#fff;border:1px solid var(--hairline);border-radius:16px}
+
+  #drop{background:#fff;border:2px dashed var(--drop-border);border-radius:16px;
+    padding:clamp(36px,6vw,56px) 24px;text-align:center;cursor:pointer;transition:.15s}
+  #drop:hover{border-color:var(--amber)}
+  #drop.over{border-color:var(--amber);background:#fdf6e8}
+  #drop .big{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+  #drop .small{color:var(--slate);font-size:13.5px}
   input[type=file]{display:none}
-  .row{background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:14px 16px;margin-top:12px;box-shadow:var(--shadow)}
-  .row h3{margin:0;font-size:14.5px;font-weight:600;display:flex;
-    justify-content:space-between;gap:12px;align-items:baseline}
-  .tag{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
-  .t-run{background:var(--accent-soft);color:var(--accent)}
-  .t-ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
-  .t-warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
-  .t-bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
-  .bar{height:4px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden}
-  .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
-  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-  td{padding:3px 0;color:var(--muted)}
-  td+td{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;width:88px}
-  .fixes{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
-  .note{font-size:12.5px;color:var(--warn);margin-top:8px}
-  .foot{margin-top:26px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .foot span{color:var(--muted);font-size:12.5px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;font-family:inherit;
+    cursor:pointer;border-radius:100px;font-weight:800;letter-spacing:-.01em}
+  .btn-primary{background:var(--ink);color:#fff;border:0;height:52px;padding:0 26px;font-size:15.5px}
+  .btn-primary:hover{background:#000}
+  .btn-secondary{background:transparent;color:var(--ink);border:1.5px solid var(--ink);
+    height:52px;padding:0 26px;font-size:15.5px}
+  .btn-secondary:hover{background:#fff}
+  .btn-cta{background:var(--amber);color:var(--ink);border:0;height:40px;padding:0 18px;font-size:13.5px}
+  .btn-cta:hover{background:#d99a36}
+  .btn[disabled]{opacity:.6;cursor:default}
+
+  .dest{margin-top:24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+    font-size:13.5px;color:var(--slate)}
+  .dest .path{font-weight:700;color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  .row{background:#fff;border:1px solid var(--hairline);border-radius:16px;
+    padding:20px 22px;margin-top:14px}
+  .row h3{margin:0;display:flex;justify-content:space-between;gap:12px;align-items:center}
+  .row h3 span:first-child{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:14.5px;font-weight:600}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 14px;
+    border-radius:100px;font-weight:800;font-size:13px;white-space:nowrap}
+  .b-fixed{background:#e8f6f0;color:var(--teal-dark)}
+  .b-partial{background:#fbf0da;color:var(--ochre)}
+  .b-open{background:#f7e7db;color:var(--rust)}
+  .b-run{background:#fbf0da;color:var(--ochre)}
+
+  .bar{height:5px;background:#f0ece1;border-radius:100px;margin-top:14px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--amber);transition:width .2s}
+
+  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13.5px}
+  td{padding:7px 9px;color:var(--slate);border-bottom:1px solid var(--hairline)}
+  tr:last-child td{border-bottom:0}
+  tr:first-child td{padding-top:0}
+  td+td{text-align:right;font-variant-numeric:tabular-nums;width:88px;font-weight:600}
+  .good{color:var(--teal-dark)!important;font-weight:800!important}
+  .bad{color:var(--rust)!important;font-weight:800!important}
+  .fixes{margin:14px 0 0;padding-left:22px;font-size:13.5px;color:var(--slate);list-style:none}
+  .fixes li{margin:3px 0;position:relative}
+  .fixes li.fix::before{content:"✓";position:absolute;left:-22px;color:var(--teal-dark);font-weight:800}
+  .fixes li.meta{padding-left:0}
+  .note{font-size:13px;color:var(--rust);margin-top:12px;background:#f7e7db;
+    padding:10px 14px;border-radius:9px;line-height:1.55}
+
+  .info{margin-top:18px;padding:26px 28px}
+  .info p{margin:0;color:var(--slate);max-width:640px}
+  .info b{color:var(--ink);font-weight:700}
+
+  .promo{background:var(--violet);border-radius:16px;padding:26px 28px;margin-top:18px}
+  .promo .k{font-weight:800;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:#fff;opacity:.75;margin-bottom:8px}
+  .promo p{margin:0;color:#fff;font-size:clamp(15.5px,1.6vw,23px);font-weight:700;
+    line-height:1.5;max-width:60ch}
+  .promo a{color:#fff;text-decoration:underline;text-underline-offset:3px}
+
+  footer{background:var(--ink);margin-top:8px}
+  footer .wrap{padding:28px 24px;display:flex;justify-content:space-between;
+    align-items:center;flex-wrap:wrap;gap:12px}
+  footer, footer a{color:#a8a8a8;font-size:13.5px}
+  footer b{color:#fff}
+  footer .credit a{color:var(--amber);font-weight:700}
+  footer .credit a:hover{color:#f0c26e}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>STL Repair</h1>
-    <div class="by">By <a href="https://youtube.com/@davetriesthis" target="_blank"
-        rel="noopener">Dave Tries This</a> and
-      <a href="https://youtube.com/@agentbaltic" target="_blank"
-        rel="noopener">Agent Baltic</a></div>
-  </header>
+<div class="wrap pad">
+  <h1>Mac STL Repair</h1>
+  <div class="by">By <b>Dave Tries This</b> &mdash;
+    <a href="https://youtube.com/@davetriesthis" target="_blank" rel="noopener">youtube.com/@davetriesthis</a></div>
 
-  <div class="sub">Makes 3D-print files watertight. No size limit &middot; nothing leaves this Mac.</div>
+  <p class="lede">Makes 3D-print files watertight. No size limit &middot; nothing leaves this Mac.</p>
 
   <div id="drop">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="margin:0 auto 14px;display:block;"><path d="M12 3v12m0-12l-4 4m4-4l4 4M5 17v2a2 2 0 002 2h10a2 2 0 002-2v-2" stroke="#96742a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <div class="big">Drag STL files here</div>
     <div class="small">or click to choose &mdash; STL, OBJ, PLY, 3MF</div>
-    <button class="btn" id="pick">Choose files</button>
+    <button class="btn btn-primary" id="pick" style="margin-top:18px">Choose files</button>
     <input type="file" id="file" multiple accept=".stl,.obj,.ply,.off,.3mf,.glb">
   </div>
 
-  <div id="list"></div>
-
-  <div class="foot">
-    <button class="btn ghost" id="reveal">Open results folder</button>
-    <span id="where"></span>
+  <div class="dest">
+    <span>Saving to</span><span class="path" id="where">&hellip;</span>
+    <button class="btn btn-secondary" id="change" style="height:36px;padding:0 16px;font-size:12.5px">Change&hellip;</button>
+    <button class="btn btn-secondary" id="reveal" style="height:36px;padding:0 16px;font-size:12.5px">Open results folder</button>
   </div>
 
-  <section class="about">
-    <h2>Why this exists</h2>
-    <p>Mesh repair has always been the weak spot in a Mac 3D-printing setup. The
-    desktop tools everyone recommends are Windows-only, which leaves Mac users
-    on browser-based repair services &mdash; and those cap what you can upload,
-    commonly around 50&nbsp;MB. A detailed sculpt or a scanned part sails past
-    that limit long before it stops being an ordinary file, and you are
-    handing your model to someone else's server to get it back. <b>Mac STL
-    Repair runs natively on your own machine.</b> No upload, no queue, no size
-    ceiling, and nothing ever leaves your Mac.</p>
+  <div id="list"></div>
+</div>
 
-    <h2>How to use it</h2>
-    <p>Drag one or more files onto the box above. Each is welded and checked,
-    then repaired &mdash; holes closed, non-manifold edges resolved, flipped
-    normals corrected, stray fragments dropped. Repaired copies are written to
-    <b>Downloads &rsaquo; STL Repaired</b> and your originals are never
-    modified. The card that appears shows before and after: when
-    <b>Watertight</b> and <b>Manifold</b> both read <i>yes</i>, the file is
-    ready to slice. If a note says triangles were added, glance at that area
-    first &mdash; closing a hole means inventing new surface, and the app
-    fills it plausibly rather than knowing what was originally there.</p>
+<div class="wrap">
+  <section class="pad" style="padding-top:8px">
+    <div class="card info">
+      <div class="eyebrow">Why this exists</div>
+      <p>Mesh repair has always been the weak spot in a Mac 3D-printing setup. The
+      desktop tools everyone recommends are Windows-only, which leaves Mac users
+      on browser-based repair services &mdash; and those cap what you can upload,
+      commonly around 50&nbsp;MB. A detailed sculpt or a scanned part sails past
+      that limit long before it stops being an ordinary file, and you are
+      handing your model to someone else's server to get it back. <b>Mac STL
+      Repair runs natively on your own machine.</b> No upload, no queue, no size
+      ceiling, and nothing ever leaves your Mac.</p>
+    </div>
 
-    <div class="share">
-      <a href="https://resources.agentbaltic.com/b/b3dVI" target="_blank"
-         rel="noopener">Download The Latest Version</a>
-      <a href="https://youtube.com/@davetriesthis" target="_blank"
-         rel="noopener">Watch the Dave Tries This YouTube channel</a>
-      <a href="https://youtube.com/@agentbaltic" target="_blank"
-         rel="noopener">Watch the Agent Baltic YouTube channel</a>
+    <div class="card info" style="margin-top:16px">
+      <div class="eyebrow">How to use it</div>
+      <p>Drag one or more files onto the box above. Each is welded and checked,
+      then repaired &mdash; holes closed, non-manifold edges resolved, flipped
+      normals corrected, stray fragments dropped. Repaired copies are written to
+      <b>Downloads &rsaquo; STL Repaired</b> and your originals are never
+      modified. The card that appears shows before and after: when
+      <b>Watertight</b> and <b>Manifold</b> both read <i>yes</i>, the file is
+      ready to slice. If a note says triangles were added, glance at that area
+      first &mdash; closing a hole means inventing new surface, and the app
+      fills it plausibly rather than knowing what was originally there.</p>
+    </div>
+
+    <div style="margin-top:22px">
+      <a class="btn btn-cta" href="https://rebrand.ly/stlrepair" target="_blank" rel="noopener">Share this tool &rarr; rebrand.ly/stlrepair</a>
+    </div>
+
+    <div class="promo">
+      <div class="k">From the same workshop</div>
+      <p>Try our teleprompter app, <a href="https://talkoverapp.com" target="_blank" rel="noopener">TalkOver</a>.
+      It follows your voice, floats over your screen, makes recordings of your
+      presentations, and has no subscription.</p>
     </div>
   </section>
 </div>
+
+<footer>
+  <div class="wrap">
+    <div>Mac STL Repair &middot; <b>By Dave Tries This</b> &mdash;
+      <a href="https://youtube.com/@davetriesthis" target="_blank" rel="noopener">youtube.com/@davetriesthis</a></div>
+    <div class="credit">By <a href="https://talkoverapp.com" target="_blank" rel="noopener"><b style="color:var(--amber)">AgentBaltic</b></a>
+      &middot; <a href="https://talkoverapp.com" target="_blank" rel="noopener">talkoverapp.com</a></div>
+  </div>
+</footer>
+
 <script>
 const drop=document.getElementById('drop'), inp=document.getElementById('file'),
-      list=document.getElementById('list');
-document.getElementById('where').textContent='Saved to '+OUTDIR;
+      list=document.getElementById('list'), where=document.getElementById('where');
+where.textContent=OUTDIR;
 document.getElementById('pick').onclick=e=>{e.stopPropagation();inp.click()};
 drop.onclick=()=>inp.click();
 inp.onchange=()=>{queue([...inp.files]);inp.value=''};
@@ -174,41 +245,38 @@ drop.addEventListener('drop',e=>queue([...e.dataTransfer.files]));
 let q=[],busy=false;
 function queue(fs){ fs.forEach(f=>q.push(f)); pump(); }
 function pump(){ if(busy||!q.length)return; busy=true; send(q.shift()); }
-
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 function n(x){return Number(x).toLocaleString()}
 
 function send(file){
   const row=document.createElement('div'); row.className='row';
-  row.innerHTML='<h3><span>'+esc(file.name)+'</span><span class="tag t-run">uploading</span></h3>'+
+  row.innerHTML='<h3><span>'+esc(file.name)+'</span><span class="badge b-run">Repairing&hellip;</span></h3>'+
                 '<div class="bar"><i></i></div>';
   list.prepend(row);
-  const tag=row.querySelector('.tag'), bar=row.querySelector('.bar>i');
-
+  const badge=row.querySelector('.badge'), bar=row.querySelector('.bar>i');
   const x=new XMLHttpRequest();
   x.open('POST','/repair');
   x.setRequestHeader('X-Filename',encodeURIComponent(file.name));
   x.upload.onprogress=e=>{ if(e.lengthComputable) bar.style.width=(e.loaded/e.total*92)+'%' };
-  x.upload.onload=()=>{ bar.style.width='96%'; tag.textContent='repairing'; };
+  x.upload.onload=()=>{ bar.style.width='96%'; };
   x.onload=()=>{
     bar.parentElement.remove();
     let r; try{ r=JSON.parse(x.responseText) }catch(_){ r={ok:false,error:'bad response'} }
-    render(row,tag,r);
-    busy=false; pump();
+    render(row,badge,r); busy=false; pump();
   };
-  x.onerror=()=>{ bar.parentElement.remove(); tag.className='tag t-bad';
-    tag.textContent='failed'; busy=false; pump(); };
+  x.onerror=()=>{ bar.parentElement.remove(); badge.className='badge b-open';
+    badge.textContent='! Failed'; busy=false; pump(); };
   x.send(file);
 }
 
-function render(row,tag,r){
-  if(!r.ok){ tag.className='tag t-bad'; tag.textContent='error';
-    row.insertAdjacentHTML('beforeend','<ul class="fixes"><li>'+esc(r.error||'failed')+'</li></ul>');
+function render(row,badge,r){
+  if(!r.ok){ badge.className='badge b-open'; badge.textContent='! Failed';
+    row.insertAdjacentHTML('beforeend','<ul class="fixes"><li class="meta">'+esc(r.error||'failed')+'</li></ul>');
     return; }
   const b=r.before,a=r.after;
-  if(r.healthy_after){ tag.className='tag t-ok';
-    tag.textContent=r.was_healthy?'already fine':'repaired'; }
-  else { tag.className='tag t-warn'; tag.textContent='partly fixed'; }
+  if(r.healthy_after){ badge.className='badge b-fixed';
+    badge.textContent=r.was_healthy?'✓ Already fine':'✓ Fixed'; }
+  else { badge.className='badge b-open'; badge.textContent='! Still open'; }
 
   let h='<table>'+
     tr('Watertight', yn(b.watertight), yn(a.watertight))+
@@ -218,17 +286,27 @@ function render(row,tag,r){
     tr('Triangles', n(b.faces), n(a.faces))+
     '</table>';
   if(r.fixes && r.fixes.length)
-    h+='<ul class="fixes">'+r.fixes.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>';
+    h+='<ul class="fixes">'+r.fixes.map(f=>'<li class="fix">'+esc(f)+'</li>').join('')+'</ul>';
   if(r.warning) h+='<div class="note">'+esc(r.warning)+'</div>';
-  h+='<ul class="fixes"><li>Saved as <b>'+esc(r.output_name)+'</b> &middot; '+
+  h+='<ul class="fixes"><li class="meta">Saved as <b>'+esc(r.output_name)+'</b> &middot; '+
      esc(r.size)+' &middot; '+r.seconds+'s</li>'+
-     '<li>Size: '+a.bbox_mm.join(' &times; ')+' mm</li></ul>';
+     '<li class="meta">Size: '+a.bbox_mm.join(' &times; ')+' mm</li></ul>';
   row.insertAdjacentHTML('beforeend',h);
 }
-function tr(k,x,y){return '<tr><td>'+k+'</td><td>'+x+'</td><td>'+y+'</td></tr>'}
+function tr(k,x,y){
+  const cls = y==='yes' ? ' class="good"' : (y==='no' ? ' class="bad"' : '');
+  return '<tr><td>'+k+'</td><td>'+x+'</td><td'+cls+'>'+y+'</td></tr>';
+}
 function yn(v){return v?'yes':'no'}
 
 document.getElementById('reveal').onclick=()=>fetch('/reveal',{method:'POST'});
+document.getElementById('change').onclick=()=>{
+  const btn=document.getElementById('change'); btn.disabled=true; btn.textContent='Choosing…';
+  fetch('/choose-folder',{method:'POST'}).then(r=>r.json()).then(j=>{
+    if(j.ok) where.textContent=j.display;
+    btn.disabled=false; btn.textContent='Change…';
+  }).catch(()=>{ btn.disabled=false; btn.textContent='Change…'; });
+};
 </script>
 </body></html>
 """
@@ -333,19 +411,46 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _display_path(self) -> str:
+        return str(OUT_DIR).replace(str(Path.home()), "~", 1)
+
     def do_GET(self):
         if self.path in ("/", "/index.html"):
-            page = PAGE.replace(
-                "OUTDIR", json.dumps(str(OUT_DIR).replace(str(Path.home()), "~")))
+            page = PAGE.replace("OUTDIR", json.dumps(self._display_path()))
             self._send(200, page.encode(), "text/html; charset=utf-8")
         else:
             self._send(404, b"{}")
 
     def do_POST(self):
+        global OUT_DIR
         if self.path == "/reveal":
             OUT_DIR.mkdir(parents=True, exist_ok=True)
             subprocess.run(["open", str(OUT_DIR)])
             return self._send(200, b'{"ok":true}')
+
+        if self.path == "/choose-folder":
+            # A page in a browser sandbox cannot pick a real filesystem folder,
+            # so this asks the OS for one directly - a genuine Finder-style
+            # open/save panel, not a browser download prompt.
+            script = (
+                'POSIX path of (choose folder with prompt '
+                '"Save repaired STL files to:" default location '
+                f'(POSIX file "{OUT_DIR}"))'
+            )
+            try:
+                r = subprocess.run(["osascript", "-e", script],
+                                   capture_output=True, text=True, timeout=120)
+                chosen = r.stdout.strip()
+                if r.returncode != 0 or not chosen:
+                    return self._send(200, b'{"ok":false}')  # cancelled
+                OUT_DIR = Path(chosen)
+                OUT_DIR.mkdir(parents=True, exist_ok=True)
+                _save_out_dir(OUT_DIR)
+                return self._send(200, json.dumps(
+                    {"ok": True, "display": self._display_path()}).encode())
+            except Exception as e:
+                return self._send(200, json.dumps(
+                    {"ok": False, "error": str(e)}).encode())
 
         if self.path != "/repair":
             return self._send(404, b"{}")
@@ -383,6 +488,9 @@ class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 def main():
+    global OUT_DIR
+    OUT_DIR = _load_out_dir()
+
     # Import the heavy libraries once, up front, so the first drop is not slow.
     import stlrepair  # noqa: F401
 
