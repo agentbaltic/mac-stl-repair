@@ -12,6 +12,7 @@ from __future__ import annotations
 import http.server
 import json
 import os
+import signal
 import socket
 import socketserver
 import subprocess
@@ -19,6 +20,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -41,6 +43,64 @@ def _save_out_dir(path: Path) -> None:
     try:
         PREFS_FILE.parent.mkdir(parents=True, exist_ok=True)
         PREFS_FILE.write_text(json.dumps({"out_dir": str(path)}))
+    except Exception:
+        pass
+
+
+# Double-clicking the Dock icon while the app is already running is normal
+# user behaviour, not a mistake. This app is a background HTTP server with
+# no window of its own, so macOS has nothing to bring to the front for a
+# second launch - without this check, the new process would sit there doing
+# nothing visible, which looks exactly like a crash. So every launch checks
+# for a live instance first: if one answers, just point the browser at it
+# and exit immediately, before paying the cost of importing numpy/trimesh.
+LOCK_FILE = Path.home() / "Library" / "Application Support" / "STL Repair" / "server.json"
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True  # exists, just owned by someone else
+    except Exception:
+        return False
+
+
+def _running_instance_url() -> str | None:
+    """Return the URL of an already-running, responsive instance, if any."""
+    try:
+        info = json.loads(LOCK_FILE.read_text())
+        pid, port = int(info["pid"]), int(info["port"])
+    except Exception:
+        return None
+    if not _pid_alive(pid):
+        return None
+    url = f"http://127.0.0.1:{port}/"
+    try:
+        with urllib.request.urlopen(url, timeout=1.5) as r:
+            if r.status == 200 and b"Mac STL Repair" in r.read(4096):
+                return url
+    except Exception:
+        pass
+    return None
+
+
+def _write_lock(port: int) -> None:
+    try:
+        LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+        LOCK_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port}))
+    except Exception:
+        pass
+
+
+def _clear_lock() -> None:
+    try:
+        info = json.loads(LOCK_FILE.read_text())
+        if int(info.get("pid", -1)) == os.getpid():
+            LOCK_FILE.unlink(missing_ok=True)
     except Exception:
         pass
 
@@ -489,6 +549,13 @@ class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 def main():
     global OUT_DIR
+
+    already = _running_instance_url()
+    if already:
+        print(f"{APP_NAME} is already running at {already} - opening it.")
+        webbrowser.open(already)
+        return
+
     OUT_DIR = _load_out_dir()
 
     # Import the heavy libraries once, up front, so the first drop is not slow.
@@ -497,6 +564,13 @@ def main():
     srv = Server(("127.0.0.1", 0), Handler)
     port = srv.socket.getsockname()[1]
     url = f"http://127.0.0.1:{port}/"
+    _write_lock(port)
+
+    def _on_terminate(signum, frame):
+        _clear_lock()
+        os._exit(0)
+
+    signal.signal(signal.SIGTERM, _on_terminate)
 
     print(f"{APP_NAME} running at {url}")
     print(f"Repaired files go to {OUT_DIR}")
@@ -508,6 +582,8 @@ def main():
         srv.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        _clear_lock()
 
 
 if __name__ == "__main__":
