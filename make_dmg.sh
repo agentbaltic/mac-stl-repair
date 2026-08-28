@@ -73,6 +73,11 @@ if [ -n "$PROFILE" ]; then
   xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait
   xcrun stapler staple "$DMG"
   xcrun stapler validate "$DMG"
+  # A .dmg container is never itself code-signed - only the .app inside is -
+  # so a "primary-signature" Gatekeeper check on the .dmg always reports
+  # rejected. That is expected and does not affect the notarised app inside;
+  # print it only as a labelled note so it cannot be mistaken for a failure.
+  echo "(the line below is expected and can be ignored - the .dmg container has no signature of its own, only the .app inside does):"
   spctl -a -vvv -t open --context context:primary-signature "$DMG" || true
 fi
 
