@@ -190,6 +190,7 @@ PAGE = r"""<!doctype html>
 
   .bar{height:5px;background:#f0ece1;border-radius:100px;margin-top:14px;overflow:hidden}
   .bar>i{display:block;height:100%;width:0;background:var(--amber);transition:width .2s}
+  .hint{margin-top:9px;font-size:12.5px;color:var(--slate);line-height:1.5}
 
   table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13.5px}
   td{padding:7px 9px;color:var(--slate);border-bottom:1px solid var(--hairline)}
@@ -325,20 +326,23 @@ function n(x){return Number(x).toLocaleString()}
 function send(file){
   const row=document.createElement('div'); row.className='row';
   row.innerHTML='<h3><span>'+esc(file.name)+'</span><span class="badge b-run">Repairing&hellip;</span></h3>'+
-                '<div class="bar"><i></i></div>';
+                '<div class="progress"><div class="bar"><i></i></div>'+
+                '<div class="hint">More complex models take longer to repair. '+
+                'The status bar may not move during repair.</div></div>';
   list.prepend(row);
-  const badge=row.querySelector('.badge'), bar=row.querySelector('.bar>i');
+  const badge=row.querySelector('.badge'), bar=row.querySelector('.bar>i'),
+        prog=row.querySelector('.progress');
   const x=new XMLHttpRequest();
   x.open('POST','/repair');
   x.setRequestHeader('X-Filename',encodeURIComponent(file.name));
   x.upload.onprogress=e=>{ if(e.lengthComputable) bar.style.width=(e.loaded/e.total*92)+'%' };
   x.upload.onload=()=>{ bar.style.width='96%'; };
   x.onload=()=>{
-    bar.parentElement.remove();
+    prog.remove();
     let r; try{ r=JSON.parse(x.responseText) }catch(_){ r={ok:false,error:'bad response'} }
     render(row,badge,r); busy=false; pump();
   };
-  x.onerror=()=>{ bar.parentElement.remove(); badge.className='badge b-open';
+  x.onerror=()=>{ prog.remove(); badge.className='badge b-open';
     badge.textContent='! Failed'; busy=false; pump(); };
   x.send(file);
 }
