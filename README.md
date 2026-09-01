@@ -81,5 +81,25 @@ repair from passing as a good one.
 
 ## Credits
 
-Built on [trimesh](https://github.com/mikedh/trimesh) and
-[pymeshfix](https://github.com/pyvista/pymeshfix) (the MeshFix algorithm).
+The repair guarantee comes from **MeshFix**, by Marco Attene at IMATI-GE / CNR
+(<https://github.com/MarcoAttene/MeshFix-V2.1>). If you use it in research,
+cite: M. Attene, *A lightweight approach to repairing digitized polygon
+meshes*, The Visual Computer, 2010.
+
+The Python engine reaches MeshFix through
+[pymeshfix](https://github.com/pyvista/pymeshfix) and uses
+[trimesh](https://github.com/mikedh/trimesh) for mesh handling. The Swift
+engine vendors MeshFix directly (`swift/Sources/CMeshFix/`) and implements the
+mesh handling itself.
+
+## Licence
+
+**GPLv3.** See [LICENSE](LICENSE).
+
+This is not a free choice — it follows from MeshFix. MeshFix is dual-licensed:
+GPLv3, or a separate commercial contract from IMATI-GE / CNR. Building on the
+GPLv3 side means this app is GPLv3 too, which is why the source lives here in
+public. Anyone distributing a modified build has to do the same.
+
+Note also that MeshFix's own terms state it "cannot be used for commercial
+purposes without a proper licensing contract." That is why this app is free.

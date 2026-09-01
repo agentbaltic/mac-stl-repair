@@ -18,3 +18,8 @@ icon.iconset/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Swift
+.build/
+.swiftpm/
+Package.resolved
