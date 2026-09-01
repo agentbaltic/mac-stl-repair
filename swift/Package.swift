@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "STLRepairKit", targets: ["STLRepairKit"]),
         .executable(name: "stlrepair-swift", targets: ["stlrepair-swift"]),
+        .executable(name: "STLRepairApp", targets: ["STLRepairApp"]),
     ],
     targets: [
         // Vendored MeshFix (IMATI-GE / CNR, GPLv3) behind a C ABI.
@@ -34,6 +35,7 @@ let package = Package(
         ),
         .target(name: "STLRepairKit", dependencies: ["CMeshFix"]),
         .executableTarget(name: "stlrepair-swift", dependencies: ["STLRepairKit"]),
+        .executableTarget(name: "STLRepairApp", dependencies: ["STLRepairKit"]),
         .testTarget(name: "STLRepairKitTests", dependencies: ["STLRepairKit"]),
     ]
 )
