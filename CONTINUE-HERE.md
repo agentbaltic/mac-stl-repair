@@ -60,9 +60,19 @@ That .dmg is the whole deliverable. Send only that file.
 
 ## Shipping an updated version
 
-Notary credentials live on the Studio as keychain profile `stlrepair`.
+Notary credentials live in the keychain as profile `stlrepair`.
 
-    cd ~/Library/Mobile\ Documents/com~apple~CloudDocs/3D\ Printing/STL\ Repair\ Tool
+**The Swift app (current).** Three commands, and nothing to stage by hand -
+`make_app.sh` already builds under `~/stlrepair-build`:
+
+    cd swift
+    bash make_app.sh
+    bash sign.sh stlrepair
+    cd .. && APP=~/stlrepair-build/"STL Repair.app" bash make_dmg.sh
+
+**The Python app (legacy).** Kept until the Swift one has been in real use
+for a while:
+
     bash build.sh
     rm -rf ~/stlrepair-build/dist
     ditto --norsrc --noextattr --noqtn dist ~/stlrepair-build/dist
@@ -71,7 +81,8 @@ Notary credentials live on the Studio as keychain profile `stlrepair`.
     bash sign_and_notarize.sh stlrepair
     bash make_dmg.sh stlrepair
 
-Steps 1-6 further down remain accurate as reference for a fresh machine.
+Steps 1-6 further down remain accurate as reference for a fresh machine,
+except that the Swift app needs no entitlements and has no nested binaries.
 
 ## Two things that bit us on the Studio
 
@@ -83,12 +94,12 @@ Steps 1-6 further down remain accurate as reference for a fresh machine.
   PATH). It produces bundles that fail to launch. `build.sh` now skips any
   conda prefix automatically and prefers `/opt/homebrew/bin/python3.14`.
 
-## Cleanup still owed
+## Where the source lives
 
-The build ran once inside the iCloud folder, leaving `.venv/` and `dist/`
-there (a few hundred MB syncing pointlessly). Delete both from
-`iCloud Drive/3D Printing/STL Repair Tool/` — the folder only needs the
-source files and the `.md` docs.
+In this git repo. The old working folder,
+`iCloud Drive/3D Printing/STL Repair Tool/`, was a stale copy of what is
+here and has been deleted — everything in it was already committed at an
+equal or older state. Do not build inside iCloud Drive (see below).
 
 ---
 
@@ -144,12 +155,10 @@ stored in this Mac's keychain; nothing else needs it again.
 ## Step 3 — Build
 
 ```bash
-cd ~/Library/Mobile\ Documents/com~apple~CloudDocs/3D\ Printing/STL\ Repair\ Tool
 bash build.sh
 ```
 
-In Finder you can also open this folder, then drag it onto a Terminal window
-after typing `cd ` to fill in the path.
+Run it from the root of this repo.
 
 Creates a virtualenv, installs numpy / scipy / networkx / trimesh / pymeshfix,
 and produces `dist/STL Repair.app` (~71 MB). Takes a few minutes. Needs

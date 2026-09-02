@@ -16,35 +16,29 @@ Then open it from Applications or Launchpad.
 
 HOW TO USE IT
 -------------
-The app opens a page in your web browser. That page is the app.
-
-  - Drag STL files onto the box, or click it to choose files.
+  - Drag STL files onto the window, or click "Choose Files".
   - Several at once is fine; they queue up.
   - Repaired files are saved to:  Downloads / STL Repaired
-    with "_repaired" added to the name.
+    with "_repaired" added to the name. Nothing is ever overwritten -
+    a second repair of the same file becomes "_repaired_2".
   - Your original file is never changed.
-  - "Open results folder" jumps straight there in Finder.
+  - "Show in Finder" jumps straight to the result.
+  - Quit with Command-Q when you are done.
 
-A 90 MB file takes about 10 seconds. Bigger files may sit on "repairing"
-for a while - that is normal, let it finish.
-
-When you are done, QUIT the app (Command-Q, or right-click its Dock icon
-and choose Quit). Closing the browser tab alone leaves it running.
+A 90 MB file takes a few seconds. Very large or badly damaged files can
+take several minutes - the line under the filename keeps updating to show
+what it is working on, so you can tell it has not stalled.
 
 
 READING THE RESULTS
 -------------------
-Each file gets a card showing before and after:
+Each file lists, in plain language, what was actually fixed - holes
+closed, non-manifold edges resolved, stray fragments removed, normals
+rebuilt, junk triangles discarded.
 
-  Watertight      No holes. Must say "yes" for a reliable print.
-  Manifold        No impossible edges. Must say "yes".
-  Open edges      Holes found. Should be 0 afterwards.
-  Shells          Separate pieces in the file.
-  Triangles       Detail level. A small change is expected.
-
-A green "repaired" or "already fine" tag means it is good to slice.
-An orange "partly fixed" tag means something survived the repair - the
-file is still usable, but look it over before printing.
+A green tick means the result is watertight and ready to slice.
+An orange warning triangle means something survived the repair - the file
+is still usable, but look it over before printing.
 
 
 THE ORANGE NOTE
@@ -62,8 +56,11 @@ warning: the repair altered the actual shape. Inspect before printing.
 
 FILE TYPES
 ----------
-Reads STL (both kinds), OBJ, PLY, OFF, 3MF, GLB.
+Reads STL - both binary and ASCII.
 Always writes standard binary STL.
+
+(Earlier versions also read OBJ, PLY, OFF, 3MF and GLB. If you need one
+of those, convert it to STL first, or ask David for the older build.)
 
 
 IF IT WILL NOT OPEN
