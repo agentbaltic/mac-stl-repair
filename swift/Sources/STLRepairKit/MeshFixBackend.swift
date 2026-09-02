@@ -37,7 +37,8 @@ public struct MeshFixBackend: RepairBackend {
         defer { meshfix_free(&result) }
 
         guard Int(status) == MF_OK else {
-            let detail = String(cString: errorBuffer)
+            let detail = String(decoding: errorBuffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) },
+                                as: UTF8.self)
             throw MeshFixError(status: status,
                                detail: detail.isEmpty ? "no detail reported" : detail)
         }
