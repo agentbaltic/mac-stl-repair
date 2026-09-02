@@ -52,17 +52,6 @@ final class RepairModel: ObservableObject {
         return outputDirectory.path.replacingOccurrences(of: home, with: "~")
     }
 
-    var hasResults: Bool {
-        jobs.contains { if case .finished = $0.state { return true }; return false }
-    }
-
-    var lastOutput: URL? {
-        jobs.reversed().compactMap { job -> URL? in
-            if case .finished(let outcome) = job.state { return outcome.output }
-            return nil
-        }.first
-    }
-
     func clear() {
         guard !isWorking else { return }
         jobs.removeAll()
@@ -88,8 +77,9 @@ final class RepairModel: ObservableObject {
         }
     }
 
-    func revealLastOutput() {
-        guard let output = lastOutput else { return }
+    /// Selects one repaired file in Finder. Each row passes its own output,
+    /// so the button always lands on that row's result.
+    func reveal(_ output: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([output])
     }
 

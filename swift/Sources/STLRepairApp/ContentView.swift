@@ -2,6 +2,29 @@ import SwiftUI
 import STLRepairKit
 import UniformTypeIdentifiers
 
+/// Every text size in the app, in one place.
+///
+/// SwiftUI's semantic fonts (.callout, .caption …) are deliberately not used:
+/// they are fixed by the system, so there is nowhere to apply an app-wide
+/// adjustment. These are explicit point sizes with `bump` added, which makes
+/// "make all the text bigger" a one-line change instead of an audit.
+private enum AppText {
+    static let bump: CGFloat = 3
+
+    static func at(_ base: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .system(size: base + bump, weight: weight)
+    }
+
+    static var title: Font { at(20, .semibold) }   // app name
+    static var byline: Font { at(14) }             // attribution under it
+    static var heading: Font { at(15, .medium) }   // drop-zone headline
+    static var eyebrow: Font { at(10, .semibold) } // section labels
+    static var body: Font { at(12) }               // prose and row detail
+    static var rowName: Font { at(13, .semibold) } // filename
+    static var small: Font { at(10) }              // timings, byte counts
+    static var control: Font { at(13) }            // buttons
+}
+
 struct ContentView: View {
     @StateObject private var model = RepairModel()
     @State private var isTargeted = false
@@ -22,11 +45,13 @@ struct ContentView: View {
                 Divider()
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 10) {
-                        ForEach(model.jobs) { JobRow(job: $0) }
+                        ForEach(model.jobs) { job in
+                            JobRow(job: job) { model.reveal($0) }
+                        }
                     }
                     .padding(16)
                 }
-                .frame(maxHeight: 340)
+                .frame(maxHeight: 400)
             }
 
             Divider()
@@ -35,7 +60,7 @@ struct ContentView: View {
             FooterBar(model: model)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .frame(minWidth: 580, minHeight: 620)
+        .frame(minWidth: 620, minHeight: 680)
     }
 
     private func pickFiles() -> [URL] {
@@ -58,10 +83,10 @@ private struct BrandHeader: View {
                 .frame(width: 55, height: 55)
             VStack(alignment: .leading, spacing: 3) {
                 Text("Mac STL Repair")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(AppText.title)
                 // Markdown links in Text open in the default browser.
                 Text("By [**Agent Baltic**](https://youtube.com/@agentbaltic) · youtube.com/@agentbaltic")
-                    .font(.system(size: 14))
+                    .font(AppText.byline)
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -97,18 +122,18 @@ private struct AboutSection: View {
         VStack(alignment: .leading, spacing: 8) {
             Eyebrow("Why this exists")
             Text("Mesh repair has always been the weak spot in a Mac 3D-printing setup. The desktop tools everyone recommends are Windows-only, which leaves Mac users on browser-based repair services — and those cap what you can upload, commonly around 50 MB. **Mac STL Repair runs natively on your own machine.** No upload, no queue, no size ceiling, and nothing ever leaves your Mac.")
-                .font(.callout)
+                .font(AppText.body)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text("Share this tool → [rebrand.ly/stlrepair](https://rebrand.ly/stlrepair)")
-                .font(.callout)
+                .font(AppText.body)
                 .padding(.top, 2)
 
             Divider().padding(.vertical, 4)
 
             Eyebrow("From the same workshop")
             Text("Try our teleprompter app, [TalkOver](https://talkoverapp.com). It follows your voice, floats over your screen, records your presentations, and has no subscription.")
-                .font(.callout)
+                .font(AppText.body)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -122,7 +147,7 @@ private struct Eyebrow: View {
     init(_ text: String) { self.text = text }
     var body: some View {
         Text(text.uppercased())
-            .font(.caption.weight(.semibold))
+            .font(AppText.eyebrow)
             .kerning(0.6)
             .foregroundStyle(.secondary)
     }
@@ -141,14 +166,15 @@ private struct DropZone: View {
                 .symbolEffect(.pulse, isActive: isWorking)
 
             Text(isWorking ? "Repairing…" : "Drop STL or OBJ files here")
-                .font(.title3.weight(.medium))
+                .font(AppText.heading)
 
             Text("Your files never leave this Mac. Originals are never modified.")
-                .font(.callout)
+                .font(AppText.body)
                 .foregroundStyle(.secondary)
 
             Button("Choose Files…", action: onBrowse)
                 .buttonStyle(.link)
+                .font(AppText.control)
                 .disabled(isWorking)
         }
         .frame(maxWidth: .infinity)
@@ -162,19 +188,33 @@ private struct DropZone: View {
     }
 }
 
+/// One file's row. Files are repaired one at a time, so every row that has
+/// not had its turn yet shows "Waiting"; only one row is ever running.
 private struct JobRow: View {
     let job: RepairJob
+    let onReveal: (URL) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
                 icon
-                Text(job.name).font(.headline)
-                Spacer()
+                Text(job.name)
+                    .font(AppText.rowName)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                Spacer(minLength: 8)
+
                 if case .finished(let outcome) = job.state {
                     Text(String(format: "%.1fs", outcome.seconds))
-                        .font(.caption.monospacedDigit())
+                        .font(AppText.small.monospacedDigit())
                         .foregroundStyle(.secondary)
+
+                    // Per row, so it reveals this file's result rather than
+                    // whichever repair happened to finish last.
+                    Button("Show in Finder") { onReveal(outcome.output) }
+                        .font(AppText.control)
+                        .controlSize(.small)
                 }
             }
             detail
@@ -205,36 +245,36 @@ private struct JobRow: View {
     @ViewBuilder private var detail: some View {
         switch job.state {
         case .waiting:
-            Text("Waiting…").font(.callout).foregroundStyle(.secondary)
+            Text("Waiting…").font(AppText.body).foregroundStyle(.secondary)
 
         case .running(let line):
             // MeshFix gives no progress fraction on long repairs, so show the
             // last thing it actually did rather than a bar that appears stuck.
-            Text(line).font(.callout).foregroundStyle(.secondary)
+            Text(line).font(AppText.body).foregroundStyle(.secondary)
                 .lineLimit(1).truncationMode(.middle)
 
         case .finished(let outcome):
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(outcome.fixes, id: \.self) { fix in
                     Label(fix, systemImage: "checkmark")
-                        .font(.callout)
+                        .font(AppText.body)
                         .labelStyle(.titleAndIcon)
                 }
                 if !outcome.isHealthy {
                     Label("Still not fully watertight - inspect before printing.",
                           systemImage: "exclamationmark.triangle")
-                        .font(.callout).foregroundStyle(.orange)
+                        .font(AppText.body).foregroundStyle(.orange)
                 }
                 if let warning = outcome.warning {
                     Label(warning, systemImage: "info.circle")
-                        .font(.callout).foregroundStyle(.orange)
+                        .font(AppText.body).foregroundStyle(.orange)
                 }
                 Text("Saved as \(outcome.output.lastPathComponent) · \(formatted(outcome.byteSize))")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(AppText.small).foregroundStyle(.secondary)
             }
 
         case .failed(let message):
-            Text(message).font(.callout).foregroundStyle(.red)
+            Text(message).font(AppText.body).foregroundStyle(.red)
         }
     }
 }
@@ -245,20 +285,25 @@ private struct FooterBar: View {
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Saving to").font(.caption).foregroundStyle(.secondary)
-                Text(model.displayPath).font(.callout).lineLimit(1).truncationMode(.head)
+                Text("Saving to").font(AppText.small).foregroundStyle(.secondary)
+                Text(model.displayPath)
+                    .font(AppText.body)
+                    .lineLimit(1)
+                    .truncationMode(.head)
             }
             Button("Change…") { model.chooseOutputDirectory() }
+                .font(AppText.control)
                 .disabled(model.isWorking)
 
             Spacer()
 
+            // Revealing a result is per row now; this bar only owns the
+            // destination folder and clearing the list.
             if !model.jobs.isEmpty {
-                Button("Clear") { model.clear() }.disabled(model.isWorking)
+                Button("Clear") { model.clear() }
+                    .font(AppText.control)
+                    .disabled(model.isWorking)
             }
-            Button("Show in Finder") { model.revealLastOutput() }
-                .disabled(!model.hasResults)
-                .keyboardShortcut("r")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
