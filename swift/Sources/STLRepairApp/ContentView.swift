@@ -9,7 +9,7 @@ import UniformTypeIdentifiers
 /// adjustment. These are explicit point sizes with `bump` added, which makes
 /// "make all the text bigger" a one-line change instead of an audit.
 private enum AppText {
-    static let bump: CGFloat = 3
+    static let bump: CGFloat = 6
 
     static func at(_ base: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         .system(size: base + bump, weight: weight)
@@ -60,7 +60,7 @@ struct ContentView: View {
             FooterBar(model: model)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .frame(minWidth: 620, minHeight: 680)
+        .frame(minWidth: 780, minHeight: 720)
     }
 
     private func pickFiles() -> [URL] {
@@ -89,12 +89,46 @@ private struct BrandHeader: View {
                     .font(AppText.byline)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+            Spacer(minLength: 12)
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text("Version \(Self.version)")
+                    .font(AppText.small)
+                    .foregroundStyle(.secondary)
+                Link("Check for Updates", destination: Self.updatesURL)
+                    .font(AppText.control)
+                Link("Request a Feature", destination: Self.featureRequestURL)
+                    .font(AppText.control)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
         .padding(.bottom, 2)
     }
+
+    /// Marketing version from the bundle. Falls back when the executable is
+    /// run directly out of .build rather than from the assembled .app.
+    private static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+    }
+
+    /// The short link is the canonical download page, so "newer version?"
+    /// and "share this" are deliberately the same destination.
+    private static let updatesURL = URL(string: "https://rebrand.ly/stlrepair")!
+
+    /// Opens the user's mail client with the recipient and subject filled in.
+    /// Built through URLComponents so the subject is percent-encoded properly
+    /// rather than hand-escaped:
+    ///   mailto:support@talkoverapp.com?subject=STL%20Repair%20Feature%20Request
+    private static let featureRequestURL: URL = {
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "support@talkoverapp.com"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: "STL Repair Feature Request")
+        ]
+        return components.url ?? URL(string: "mailto:support@talkoverapp.com")!
+    }()
 }
 
 /// The Agent Baltic mark, copied into Contents/Resources by make_app.sh.
