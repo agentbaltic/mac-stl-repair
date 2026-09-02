@@ -16,7 +16,7 @@ Then open it from Applications or Launchpad.
 
 HOW TO USE IT
 -------------
-  - Drag STL files onto the window, or click "Choose Files".
+  - Drag STL or OBJ files onto the window, or click "Choose Files".
   - Several at once is fine; they queue up.
   - Repaired files are saved to:  Downloads / STL Repaired
     with "_repaired" added to the name. Nothing is ever overwritten -
@@ -56,11 +56,11 @@ warning: the repair altered the actual shape. Inspect before printing.
 
 FILE TYPES
 ----------
-Reads STL - both binary and ASCII.
-Always writes standard binary STL.
+Reads STL (binary and ASCII) and OBJ.
+Always writes standard binary STL - an OBJ comes out as an STL.
 
-(Earlier versions also read OBJ, PLY, OFF, 3MF and GLB. If you need one
-of those, convert it to STL first, or ask David for the older build.)
+(Earlier versions also read PLY, OFF, 3MF and GLB. If you need one of
+those, convert it to STL first, or ask David for the older build.)
 
 
 IF IT WILL NOT OPEN

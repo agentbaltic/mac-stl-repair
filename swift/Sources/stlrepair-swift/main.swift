@@ -9,8 +9,8 @@ func usage() -> Never {
     print("""
     stlrepair-swift - STL diagnosis and repair
 
-      stlrepair-swift diagnose <file.stl> [--json]
-      stlrepair-swift repair   <file.stl> [-o out.stl] [--json]
+      stlrepair-swift diagnose <file.stl|file.obj> [--json]
+      stlrepair-swift repair   <file.stl|file.obj> [-o out.stl] [--json]
                                [--parts separate|merge] [--min-part-faces N]
                                [--backend meshfix|native]
                                [--merge-tol X] [--force]
@@ -57,7 +57,7 @@ let encoder = JSONEncoder()
 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
 do {
-    var mesh = try STL.read(contentsOf: inputURL)
+    var mesh = try MeshFile.read(contentsOf: inputURL)
     let options = RepairOptions(mergeParts: partsMode == "merge",
                                 minPartFaces: minPartFaces,
                                 mergeTolerance: mergeTolerance,

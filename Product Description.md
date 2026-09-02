@@ -47,7 +47,7 @@ was originally there.
 - Multi-part plates are handled per object, so separate parts stay separate
 - Plain-English before/after report — no need to know what "manifold" means
 - Warns you when a repair changed the model's actual shape, instead of hiding it
-- Reads STL (binary and text), OBJ, PLY, OFF, 3MF, GLB. Always writes binary STL
+- Reads STL (binary and text) and OBJ. Always writes binary STL
 - Signed and notarised by Apple — installs with no security warnings
 - Your original files are never modified
 

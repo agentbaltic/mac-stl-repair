@@ -37,9 +37,8 @@ struct ContentView: View {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        if let stl = UTType(filenameExtension: "stl") {
-            panel.allowedContentTypes = [stl]
-        }
+        panel.allowedContentTypes = MeshFile.supportedExtensions
+            .compactMap { UTType(filenameExtension: $0) }
         return panel.runModal() == .OK ? panel.urls : []
     }
 }
@@ -56,7 +55,7 @@ private struct DropZone: View {
                 .foregroundStyle(isTargeted ? Color.accentColor : .secondary)
                 .symbolEffect(.pulse, isActive: isWorking)
 
-            Text(isWorking ? "Repairing…" : "Drop STL files here")
+            Text(isWorking ? "Repairing…" : "Drop STL or OBJ files here")
                 .font(.title3.weight(.medium))
 
             Text("Your files never leave this Mac. Originals are never modified.")

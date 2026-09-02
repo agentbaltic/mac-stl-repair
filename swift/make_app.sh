@@ -41,8 +41,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key><string>$APP_NAME</string>
     <key>CFBundleIdentifier</key><string>com.agentbaltic.stlrepair</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>2.0</string>
-    <key>CFBundleVersion</key><string>2.0</string>
+    <key>CFBundleShortVersionString</key><string>2.1</string>
+    <key>CFBundleVersion</key><string>2.1</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -54,6 +54,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
             <key>CFBundleTypeName</key><string>STL Mesh</string>
             <key>CFBundleTypeRole</key><string>Viewer</string>
             <key>LSItemContentTypes</key><array><string>public.standard-tesselated-geometry-format</string></array>
+            <key>LSHandlerRank</key><string>Alternate</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key><string>Wavefront OBJ</string>
+            <key>CFBundleTypeRole</key><string>Viewer</string>
+            <key>LSItemContentTypes</key><array><string>public.geometry-definition-format</string></array>
             <key>LSHandlerRank</key><string>Alternate</string>
         </dict>
     </array>

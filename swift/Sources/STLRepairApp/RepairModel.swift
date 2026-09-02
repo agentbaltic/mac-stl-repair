@@ -69,9 +69,9 @@ final class RepairModel: ObservableObject {
     }
 
     func add(_ urls: [URL]) {
-        let stls = urls.filter { $0.pathExtension.lowercased() == "stl" }
-        guard !stls.isEmpty else { return }
-        jobs.append(contentsOf: stls.map { RepairJob(source: $0) })
+        let accepted = urls.filter(MeshFile.isSupported)
+        guard !accepted.isEmpty else { return }
+        jobs.append(contentsOf: accepted.map { RepairJob(source: $0) })
         Task { await processQueue() }
     }
 
@@ -131,7 +131,7 @@ final class RepairModel: ObservableObject {
             do {
                 try FileManager.default.createDirectory(at: directory,
                                                         withIntermediateDirectories: true)
-                let mesh = try STL.read(contentsOf: source)
+                let mesh = try MeshFile.read(contentsOf: source)
                 let log = RepairLog(onLine: progress)
                 let result = try Repair.run(mesh, backend: MeshFixBackend(), log: log)
 
