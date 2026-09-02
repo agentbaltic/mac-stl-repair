@@ -34,6 +34,7 @@ struct ContentView: View {
             Divider()
             FooterBar(model: model)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .frame(minWidth: 580, minHeight: 620)
     }
 
@@ -52,15 +53,15 @@ struct ContentView: View {
 /// Title, logo and channel link, matching the header of the old browser page.
 private struct BrandHeader: View {
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             BrandLogo()
-                .frame(width: 46, height: 46)
-            VStack(alignment: .leading, spacing: 2) {
+                .frame(width: 55, height: 55)
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Mac STL Repair")
-                    .font(.title2.weight(.semibold))
+                    .font(.system(size: 20, weight: .semibold))
                 // Markdown links in Text open in the default browser.
                 Text("By [**Agent Baltic**](https://youtube.com/@agentbaltic) · youtube.com/@agentbaltic")
-                    .font(.callout)
+                    .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
             Spacer()
